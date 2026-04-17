@@ -45,55 +45,56 @@ end
 
 figure
 
+% ---------- START ON BACK ROW ----------
+startTz = -100;
+
+moveNum = 1;
+
 % ---------- STRAIGHT ----------
+frameNum = 1;
 for tx = -50:1:25
-    tz = 0;
+    tz = startTz;
     y = pi;
+
+    fprintf('Move %d: straight   frame=%d   tx=%.2f tz=%.2f y=%.4f\n', ...
+        moveNum, frameNum, tx, tz, y);
 
     Car = getCarTransform(Car0, 0, 0, y);
     Buildings = shiftWorld(BaseBuildings, -tx, -tz);
 
-    drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, wxmin, wxmax, wymin, wymax);
+    drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, ...
+        wxmin, wxmax, wymin, wymax);
     pause(pse)
-end
 
-% ---------- TURN ----------
+    frameNum = frameNum + 1;
+end
+moveNum = moveNum + 1;
+
+% ---------- TURN RIGHT ----------
 turnX = 25;
 turnRadius = 10;
 
+frameNum = 1;
 for theta = (pi/24):(pi/24):(pi/2)
-    tx = turnX + turnRadius * (1 - cos(theta));
-    tz = -turnRadius * sin(theta);
-    y  = pi - theta;
+    tx = turnX - turnRadius * (1 - cos(theta));
+    tz = startTz - turnRadius * sin(theta);
+    y  = pi + theta;
+
+    fprintf('Move %d: right turn   frame=%d   theta=%.4f   tx=%.2f tz=%.2f y=%.4f\n', ...
+        moveNum, frameNum, theta, tx, tz, y);
 
     Car = getCarTransform(Car0, 0, 0, y);
     Buildings = shiftWorld(BaseBuildings, -tx, -tz);
 
-    drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, wxmin, wxmax, wymin, wymax);
+    drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, ...
+        wxmin, wxmax, wymin, wymax);
     pause(pse)
+
+    frameNum = frameNum + 1;
 end
-
-% ---------- AFTER TURN ----------
-for tz = -(turnRadius + 1):-1:-100
-
-    
-    fprintf('tz = %.2f\n', tz);
+moveNum = moveNum + 1;
 
 
-
-
-    tx = turnX + turnRadius;
-    y = pi/2;
-
-    Car = getCarTransform(Car0, 0, 0, y);
-    Buildings = shiftWorld(BaseBuildings, -tx, -tz);
-
-    drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, wxmin, wxmax, wymin, wymax);
-     
-    pause(pse)
-end
-
-pause off
 
 % ==========================================================
 function shiftedBuildings = shiftWorld(buildings, dx, dz)
@@ -114,17 +115,14 @@ function drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, wxmin, wxmax, wym
     set(gca,'Color',[0.2 0.2 0.2])
     hold on
 
-    disp("here 1.61")
-
     for n = 1:length(Buildings)
         projectShape(Buildings{n}, Abuild, b, c, d, 'w-');
     end
 
-    disp("here 1.62")
     projectShape(Car, Acar, b, c, d, 'b-');
-disp("here 1.63")
+
     set(findobj(gca,'Type','line'),'LineWidth',2)
-disp("here 1.64")
+
     axis([wxmin wxmax wymin wymax])
     axis equal
 end

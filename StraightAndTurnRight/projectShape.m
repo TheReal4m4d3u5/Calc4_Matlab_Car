@@ -1,7 +1,7 @@
 function projectShape(shape3D, adjacency, b, c, d, lineStyle)
 
 
-disp("here 1.661")
+
 
 P = [1 0 -b/d 0;
      0 1 -c/d 0;
@@ -13,22 +13,18 @@ w = proj(4,:);
 
 % ✅ Instead of killing the whole frame, just invalidate bad points
 w(abs(w) < 0.1) = NaN;
-disp("here 1.662")
+
 xyz = proj(1:3,:) ./ [w; w; w];
 points2D = transpose(xyz(1:2,:));
-disp("here 1.663")
+
 % Skip if projection exploded numerically
 if any(~isfinite(points2D), 'all')
     return
 end
-disp("here 1.664")
+
 
 gplot(adjacency, points2D, lineStyle);
 
-    fprintf('x: %.4f\n', xyz(1,:))
-fprintf('y: %.4f\n', xyz(2,:))
-fprintf('z: %.4f\n', xyz(3,:))
 
-disp("here 1.665")
 
 end

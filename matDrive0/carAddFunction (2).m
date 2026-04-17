@@ -12,6 +12,9 @@ sy = 1;            % y scaling facotr
 sz = 1;            % z scaling facotr
 
 
+
+
+
 wxmin = -60;
 wxmax = 35;
 wymin = -20;
