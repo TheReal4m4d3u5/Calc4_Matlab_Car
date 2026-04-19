@@ -1,11 +1,11 @@
 function [row, col, heading, currentPos] = driveStep( ...
     moveNum, row, col, heading, currentPos, ...
-    roadX, roadZ, zOffset, ...
+    roadX, roadZ, xOffset, zOffset, ...
     Car0, BaseBuildings, Acar, Abuild, ...
     b, c, d, wxmin, wxmax, wymin, wymax, ...
     pse, moveFramesBase, turnFrames, preTurnDistance, postTurnDistance)
 
-[actions, nextHeadings] = getValidActions(row, col, heading);
+[actions, nextHeadings] = getValidActions(row, col, heading, length(roadZ), length(roadX));
 
 actionIdx = randi(length(actions));
 action = actions{actionIdx};
@@ -14,12 +14,15 @@ newHeading = nextHeadings{actionIdx};
 oldRow = row;
 oldCol = col;
 
-% use actual current displayed position as start
 p0 = currentPos;
 
 [row, col] = moveForward(oldRow, oldCol, newHeading);
 
-newSx = roadX(col);
+if row < 1 || row > length(roadZ) || col < 1 || col > length(roadX)
+    error('Out of bounds: row=%d col=%d', row, col);
+end
+
+newSx = roadX(col) + xOffset;
 newSz = -roadZ(row) + zOffset;
 p1 = [newSx; newSz];
 
@@ -40,7 +43,7 @@ if strcmp(action, 'straight')
     moveFrames = max(moveFrames, 16);
 
     dir0 = headingVector(heading);
-    yInterp = vecToYaw(dir0(1), dir0(2));
+    yInterp = vecToYaw(dir0(1), dir0(2)) + pi;
 
     for f = 1:moveFrames
         t = f / moveFrames;
@@ -70,26 +73,25 @@ else
     pLead = p0 + leadDist * dir0;
     pOutStart = p1 - outDist * dir1;
 
-    y0 = headingToYaw(heading);
-    y1 = headingToYaw(newHeading);
+    y0 = headingToYaw(heading) + pi;
+    y1 = headingToYaw(newHeading) + pi;
 
-    leftTurn = isLeftTurn(heading, newHeading);
-
-    if leftTurn
+    if strcmp(action, 'right')
         turnSign = -1;
+        turnNormal = rightNormal(dir0);
     else
         turnSign = 1;
+        turnNormal = leftNormal(dir0);
     end
 
-    % radius based on space between end of lead-in and start of lead-out
-    r = norm(pOutStart - pLead) / sqrt(2);
+    dp = pOutStart - pLead;
+    r0 = dot(dp, dir0);
+    r1 = dot(dp, dir1);
 
-    if leftTurn
-        center = pLead + leftNormal(dir0) * r;
-    else
-        center = pLead + rightNormal(dir0) * r;
-    end
+    r = min(r0, r1);
+    r = max(r, 0);
 
+    center = pLead + turnNormal * r;
     startVec = pLead - center;
 
     leadLen = norm(pLead - p0);
@@ -106,7 +108,7 @@ else
     straightFramesOut = max(4, round(moveFrames * (outLen / totalLen)));
 
     % --- lead-in before turn ---
-    leadYaw = vecToYaw(dir0(1), dir0(2));
+    leadYaw = vecToYaw(dir0(1), dir0(2)) + pi;
 
     for f = 1:straightFramesIn
         t = f / straightFramesIn;
@@ -123,7 +125,7 @@ else
         pause(pse);
     end
 
-    % --- 90-degree turn with rotation matrix ---
+    % --- 90-degree turn with correct center ---
     for f = 1:turnOnlyFramesNow
         t = f / turnOnlyFramesNow;
         a = smoothstep(t);
@@ -134,7 +136,7 @@ else
         v = R * startVec;
         p = center + v;
 
-        yInterp = y0 - theta;
+        yInterp = y0 + theta;
 
         Car = getCarTransform(Car0, 0, 0, yInterp);
         Buildings = shiftWorld(BaseBuildings, -p(1), -p(2));
@@ -145,32 +147,28 @@ else
         pause(pse);
     end
 
-    % force the turn to end exactly on the straight lead-out line
-    pTurnEnd = pOutStart;
-
     % --- lead-out after turn ---
-    leadOutOffsetX = 10;
+    leadOutOffsetX = 0;
     leadOutOffsetZ = 0;
-    
+
     pLeadOutStart = pOutStart + [leadOutOffsetX; leadOutOffsetZ];
-    
+
     for f = 1:straightFramesOut
         t = f / straightFramesOut;
         a = smoothstep(t);
-    
+
         p = (1 - a) * pLeadOutStart + a * p1;
-    
+
         Car = getCarTransform(Car0, 0, 0, y1);
         Buildings = shiftWorld(BaseBuildings, -p(1), -p(2));
-    
+
         drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, ...
             wxmin, wxmax, wymin, wymax);
-    
+
         pause(pse);
     end
 end
 
-% snap logical state to exact target intersection
 currentPos = p1;
 heading = newHeading;
 end

@@ -8,8 +8,8 @@ switch heading
     case 'W'
         newCol = col - 1;
     case 'N'
-        newRow = row - 1;
-    case 'S'
         newRow = row + 1;
+    case 'S'
+        newRow = row - 1;
 end
 end

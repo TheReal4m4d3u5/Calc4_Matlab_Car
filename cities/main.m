@@ -4,13 +4,11 @@ close all;
 
 pause on
 
-% ==========================================================
-% VIEW / CAMERA
-% ==========================================================
 b = -30;
 c = 30;
 d = 70;
 
+% Fixed screen window
 wxmin = -80;
 wxmax = 80;
 wymin = -40;
@@ -18,82 +16,81 @@ wymax = 40;
 
 pse = 0.03;
 
-% ==========================================================
-% MOTION SETTINGS
-% ==========================================================
-numMoves = 30;
-turnFrames = 28;
-moveFramesBase = 18;
-preTurnDistance = 10;
-postTurnDistance = 15;
-
-% ==========================================================
-% Buildings SETTINGS
-% ==========================================================
-xOffset = -35;   % shift left
-zOffset = 0;     % no forward/back shift
-
-% ==========================================================
-% DATA
-% ==========================================================
 [dCar, Acar] = carData();
 [dBuilding, Abuild] = buildingData();
 
+% Car stays near camera reference position
 Car0 = [1 0 0 0;
         0 1 0 0;
-        0 0 1 1;
+        0 0 1 -20;
         0 0 0 1] * dCar;
 
-Rfix = [cos(pi)  0 -sin(pi) 0;
-        0        1 0        0;
-        sin(pi)  0 cos(pi)  0;
-        0        0 0        1];
-
-Car0 = Rfix * Car0;
-
+% ==========================================================
+% CITY LAYOUT
+% ==========================================================
 xPositions = [35 75 115];
-zPositions = [-20 -60 -120];
-BaseBuildings = buildCity(dBuilding, xPositions, zPositions, xOffset, zOffset);
+zPositions = [-20 -60 -100];
+
+xOffsetBuildings = -10;
+zOffsetBuildings = 0;
+
+BaseBuildings = buildCity(dBuilding, xPositions, zPositions, ...
+    xOffsetBuildings, zOffsetBuildings);
 
 % ==========================================================
-% ROAD GRID
+% ROAD GRID / CAR GRID
 % ==========================================================
-roadX = [0 35 75 115];
-roadZ = [0 -35 -75 -120];
+roadX = [15 55 95];
+roadZ = [0 40 80];
 
-row = 1;
+xOffset = 10;
+zOffset = 20;
+
+% ==========================================================
+% MOTION SETTINGS
+% ==========================================================
+moveFramesBase = 28;
+turnFrames = 18;
+
+preTurnDistance = 6;
+postTurnDistance = 6;
+
+numMoves = 20;
+
+% ==========================================================
+% INITIAL STATE
+% ==========================================================
+row = 3;
 col = 1;
 heading = 'E';
-zOffset = -100;
 
-sx = roadX(col);
+startSx = roadX(col) + xOffset;
+startSz = -roadZ(row) + zOffset;
+currentPos = [startSx; startSz];
 
-sz = -roadZ(row) + zOffset;
+% ==========================================================
+% INITIAL DRAW
+% ==========================================================
+dir0 = headingVector(heading);
+y0 = vecToYaw(dir0(1), dir0(2)) + pi;
 
-% ✅ NEW
-currentPos = [sx; sz];
-
-y = headingToYaw(heading);
-
-Car = getCarTransform(Car0, 0, 0, y);
-Buildings = shiftWorld(BaseBuildings, -sx, -sz);
+Car = getCarTransform(Car0, 0, 0, y0);
+Buildings = shiftWorld(BaseBuildings, -currentPos(1), -currentPos(2));
 
 drawSceneFixed(Car, Buildings, Acar, Abuild, b, c, d, ...
     wxmin, wxmax, wymin, wymax);
-pause(0.5);
+
+pause(1);
 
 % ==========================================================
-% DRIVE LOOP
+% MAIN LOOP
 % ==========================================================
 for moveNum = 1:numMoves
-
     [row, col, heading, currentPos] = driveStep( ...
         moveNum, row, col, heading, currentPos, ...
-        roadX, roadZ, zOffset, ...
+        roadX, roadZ, xOffset, zOffset, ...
         Car0, BaseBuildings, Acar, Abuild, ...
         b, c, d, wxmin, wxmax, wymin, wymax, ...
-        pse, moveFramesBase, turnFrames, preTurnDistance, postTurnDistance);
-
- end
-
-pause off
+        pse, moveFramesBase, turnFrames, ...
+        preTurnDistance, postTurnDistance);
+end
